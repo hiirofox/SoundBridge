@@ -1,0 +1,46 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio Version 17
+
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SoundBridge - Standalone Plugin", "SoundBridge_StandalonePlugin.vcxproj", "{84571E92-E131-6BCE-8A61-FE945D25D90A}"
+	ProjectSection(ProjectDependencies) = postProject
+		{450BAC3E-7A39-EB04-E8F5-77C67EFBE508} = {450BAC3E-7A39-EB04-E8F5-77C67EFBE508}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SoundBridge - VST3", "SoundBridge_VST3.vcxproj", "{1DD9C3F3-ED99-9D09-7F00-8B3188CD05B7}"
+	ProjectSection(ProjectDependencies) = postProject
+		{450BAC3E-7A39-EB04-E8F5-77C67EFBE508} = {450BAC3E-7A39-EB04-E8F5-77C67EFBE508}
+		{8816A67E-636B-9C13-FACC-C4425EF8A821} = {8816A67E-636B-9C13-FACC-C4425EF8A821}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SoundBridge - Shared Code", "SoundBridge_SharedCode.vcxproj", "{450BAC3E-7A39-EB04-E8F5-77C67EFBE508}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SoundBridge - VST3 Manifest Helper", "SoundBridge_VST3ManifestHelper.vcxproj", "{8816A67E-636B-9C13-FACC-C4425EF8A821}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1DD9C3F3-ED99-9D09-7F00-8B3188CD05B7}.Debug|x64.ActiveCfg = Debug|x64
+		{1DD9C3F3-ED99-9D09-7F00-8B3188CD05B7}.Debug|x64.Build.0 = Debug|x64
+		{1DD9C3F3-ED99-9D09-7F00-8B3188CD05B7}.Release|x64.ActiveCfg = Release|x64
+		{1DD9C3F3-ED99-9D09-7F00-8B3188CD05B7}.Release|x64.Build.0 = Release|x64
+		{84571E92-E131-6BCE-8A61-FE945D25D90A}.Debug|x64.ActiveCfg = Debug|x64
+		{84571E92-E131-6BCE-8A61-FE945D25D90A}.Debug|x64.Build.0 = Debug|x64
+		{84571E92-E131-6BCE-8A61-FE945D25D90A}.Release|x64.ActiveCfg = Release|x64
+		{84571E92-E131-6BCE-8A61-FE945D25D90A}.Release|x64.Build.0 = Release|x64
+		{450BAC3E-7A39-EB04-E8F5-77C67EFBE508}.Debug|x64.ActiveCfg = Debug|x64
+		{450BAC3E-7A39-EB04-E8F5-77C67EFBE508}.Debug|x64.Build.0 = Debug|x64
+		{450BAC3E-7A39-EB04-E8F5-77C67EFBE508}.Release|x64.ActiveCfg = Release|x64
+		{450BAC3E-7A39-EB04-E8F5-77C67EFBE508}.Release|x64.Build.0 = Release|x64
+		{8816A67E-636B-9C13-FACC-C4425EF8A821}.Debug|x64.ActiveCfg = Debug|x64
+		{8816A67E-636B-9C13-FACC-C4425EF8A821}.Debug|x64.Build.0 = Debug|x64
+		{8816A67E-636B-9C13-FACC-C4425EF8A821}.Release|x64.ActiveCfg = Release|x64
+		{8816A67E-636B-9C13-FACC-C4425EF8A821}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
