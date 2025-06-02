@@ -49,6 +49,8 @@ LModelAudioProcessorEditor::LModelAudioProcessorEditor(LModelAudioProcessor& p)
 	addAndMakeVisible(K_Keep);
 	*/
 	snd.SetAudioFileReader(&p.audioReader);
+	snd.SetSoundDB(&p.sdbl);
+	snd.SetUpdataSignal(&p.audioname, &p.updataFlag);
 	addAndMakeVisible(snd);
 	startTimerHz(30);
 }

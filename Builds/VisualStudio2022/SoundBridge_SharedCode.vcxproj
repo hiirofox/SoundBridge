@@ -2837,6 +2837,7 @@
     <ClInclude Include="..\..\Source\dsp\fft.h"/>
     <ClInclude Include="..\..\Source\dsp\mfcc_conv.h"/>
     <ClInclude Include="..\..\Source\dsp\soundDB.h"/>
+    <ClInclude Include="..\..\Source\dsp\bridge.h"/>
     <ClInclude Include="..\..\Source\ui\LM_slider.h"/>
     <ClInclude Include="..\..\Source\ui\soundUI.h"/>
     <ClInclude Include="..\..\Source\PluginProcessor.h"/>

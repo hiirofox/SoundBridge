@@ -2,19 +2,26 @@
 
 #include <JuceHeader.h>
 #include "../dsp/audiofile.h"
+#include "../dsp/soundDB.h"
 class SoundUI :public juce::Component, public juce::FileDragAndDropTarget
 {
 private:
 	int isFileDragOver = false;
-	int hasAudioData = 0;
 	juce::String filename = "";
+
+	std::string* pFilename = NULL;//Ö¸ÕëÂúÌì·É
+	int* pUpdataFlag = NULL;
 	AudioFileReader* pReader = NULL;
+	SoundDB* pSDB = NULL;
 
 	constexpr static int MaxDisplayDataLen = 8192;
 	float displayData[MaxDisplayDataLen];
+	int shouldUpdata = 1;
 	void UpdataDisplayData()
 	{
-		if (!pReader)return;
+		if (!shouldUpdata)return;
+		if ((!pReader) || (!pReader->isValid()))return;
+		if (!pReader->isLoadDone())return;
 		juce::Rectangle<int> rect = getBounds();
 		int w = rect.getWidth(), h = rect.getHeight();
 
@@ -46,6 +53,7 @@ private:
 			else lpfv += 0.5 * (v - lpfv);
 			displayData[i] = lpfv;
 		}
+		shouldUpdata = 0;
 	}
 public:
 	SoundUI()
@@ -59,7 +67,6 @@ public:
 		juce::File file(files[0]);
 		juce::String extension = file.getFileExtension().toLowerCase();
 		juce::StringArray supportedFormats;
-		supportedFormats.add(".wv");
 		supportedFormats.add(".wav");
 		supportedFormats.add(".mp3");
 		supportedFormats.add(".ogg");
@@ -84,26 +91,23 @@ public:
 	{
 		isFileDragOver = false;
 		filename = files[0];
-		if (pReader)
-		{
-			if (pReader->loadFile(filename.toStdString()))
-			{
-				hasAudioData = 1;
-			}
-		}
-		UpdataDisplayData();
+		if (pFilename)*pFilename = filename.toStdString();
+		if (pUpdataFlag)*pUpdataFlag = 1;
+		shouldUpdata = 1;
 	}
 	void resized() override
 	{
 		Component::resized();
-		UpdataDisplayData();
+		shouldUpdata = 1;
 	}
 	void paint(juce::Graphics& g) override
 	{
 		juce::Rectangle<int> rect = getBounds();
 		int w = rect.getWidth(), h = rect.getHeight();
 
-		if (!hasAudioData)
+		UpdataDisplayData();
+
+		if ((!pReader) || (pReader->getNumSamples() <= 0))
 		{
 			g.setColour(juce::Colour(0xFFFFFFFF));
 			g.setFont(juce::Font("FIXEDSYS", 16.0, 1));
@@ -127,6 +131,16 @@ public:
 			}
 		}
 
+		if (pSDB)
+		{
+			float selectPos = pSDB->GetPos();
+
+			g.setColour(juce::Colour(0xff00ff00));
+			int x = (float)w * selectPos;
+			g.drawLine(x, 0, x, h, 2);
+
+		}
+
 		if (isFileDragOver) g.setColour(juce::Colour(0xFF00FFFF));
 		else g.setColour(juce::Colour(0xFF00FF00));
 		g.drawLine(0, 0, w, 0, 3);
@@ -138,5 +152,14 @@ public:
 	void SetAudioFileReader(AudioFileReader* pReader)
 	{
 		this->pReader = pReader;
+	}
+	void SetSoundDB(SoundDB* pSDB)
+	{
+		this->pSDB = pSDB;
+	}
+	void SetUpdataSignal(std::string* pfname, int* pflag)
+	{
+		pFilename = pfname;
+		pUpdataFlag = pflag;
 	}
 };

@@ -7,9 +7,9 @@
 
 class MFCCConverter {
 private:
-	constexpr static int MaxFFTLen = 4096;
-	float buf1re[MaxFFTLen + 3];
-	float buf1im[MaxFFTLen + 3];
+	constexpr static int MaxFFTLen = 16384;
+	float buf1re[MaxFFTLen];
+	float buf1im[MaxFFTLen];
 	inline float toexp(float x, float n)
 	{
 		float sign = x < 0 ? -1.0f : 1.0f;
@@ -17,6 +17,11 @@ private:
 		return (expf((x - 1.0) * n) - expf(-n)) / (1.0 - expf(-n)) * sign;
 	};
 public:
+	MFCCConverter()
+	{
+		memset(buf1re, 0, sizeof(buf1re));
+		memset(buf1im, 0, sizeof(buf1im));
+	}
 	void Process(const float* in, float* mfcc, int numSamples, int numMFCC)
 	{
 		int FFTLen = 1 << (int)(ceilf(log2f(numSamples)));
@@ -35,11 +40,14 @@ public:
 			buf1im[i] = 0;
 		}
 		fft_f32(buf1re, buf1im, FFTLen, 1);
-		FFTLen /= 2;		//后边镜像的没啥用了
+
+		FFTLen /= 2;		//后边镜像的没啥用了!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 		for (int i = 0; i < FFTLen; ++i)//功率谱
 		{
 			float r = sqrtf(buf1re[i] * buf1re[i] + buf1im[i] * buf1im[i]);
-			buf1im[i] = logf(r + 0.00000001);
+			buf1im[i] = logf(r + 0.00000001);//倒谱的
+			//buf1im[i] = r;
 		}
 		for (int i = 0; i < FFTLen; ++i)//搬过来挪三个采样，方便插值
 		{
@@ -98,6 +106,8 @@ public:
 			buf1re[i] += lpfv;
 		}
 		//现在buf1re就是滤波过后的mfcc谱（不是标准的），可以直接抽取来用
+		
+		/*
 		int FFTLen2 = 1 << (int)(ceilf(log2f(numMFCC)));
 		for (int i = 0; i < FFTLen2; ++i)
 		{
@@ -110,9 +120,28 @@ public:
 			buf1re[FFTLen2 - i - 1] = 0;
 		}
 		fft_f32(buf1im, buf1re, FFTLen2 * 2, -1);
+		float sum = 0.0001;
 		for (int i = 0; i < numMFCC; ++i)
 		{
+			sum += buf1im[i];
 			mfcc[i] = buf1im[i];
+		}
+		for (int i = 0; i < numMFCC; ++i)
+		{
+			mfcc[i] /= sum;
+		}*/
+		
+		
+		float sum = 0;
+		for (int i = 0; i < numMFCC; ++i)
+		{
+			float v = buf1re[i * FFTLen / numMFCC];
+			sum += v;
+			mfcc[i] = v;
+		}
+		for (int i = 0; i < numMFCC; ++i)
+		{
+			mfcc[i] /= sum;
 		}
 	}
 };

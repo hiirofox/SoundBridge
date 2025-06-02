@@ -168,7 +168,29 @@ void LModelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
 		return (expf((x - 1.0) * n) - expf(-n)) / (1.0 - expf(-n)) * sign;
 		};
 
-	
+	if (updataFlag)
+	{
+		updataFlag = 0;
+		if (audioReader.loadFile(audioname))
+		{
+			float* datl = audioReader.getBufferPointer(0);
+			float* datr = audioReader.getBufferPointer(0);
+			if (audioReader.getNumChannels() >= 2)
+			{
+				datr = audioReader.getBufferPointer(1);
+			}
+			if (datr == NULL)
+			{
+				datr = datl;
+			}
+			sdbl.Updata(datl, audioReader.getNumSamples());
+			sdbr.Updata(datr, audioReader.getNumSamples());
+		}
+	}
+
+	bl.ProcessBlock(recbufl, wavbufl, numSamples);
+	br.ProcessBlock(recbufr, wavbufr, numSamples);
+
 }
 
 //==============================================================================

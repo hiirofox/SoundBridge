@@ -10,6 +10,7 @@
         <FILE id="SVLIjv" name="fft.h" compile="0" resource="0" file="Source/dsp/fft.h"/>
         <FILE id="hGSVn1" name="mfcc_conv.h" compile="0" resource="0" file="Source/dsp/mfcc_conv.h"/>
         <FILE id="YuKbBm" name="soundDB.h" compile="0" resource="0" file="Source/dsp/soundDB.h"/>
+        <FILE id="UVEvgD" name="bridge.h" compile="0" resource="0" file="Source/dsp/bridge.h"/>
       </GROUP>
       <GROUP id="{77658F9F-834F-38E3-26B4-56338CA4C0B5}" name="ui">
         <FILE id="qASEKN" name="LM_slider.cpp" compile="1" resource="0" file="Source/ui/LM_slider.cpp"/>

@@ -3555,6 +3555,9 @@
     <ClInclude Include="..\..\Source\dsp\soundDB.h">
       <Filter>SoundBridge\Source\dsp</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Source\dsp\bridge.h">
+      <Filter>SoundBridge\Source\dsp</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\Source\ui\LM_slider.h">
       <Filter>SoundBridge\Source\ui</Filter>
     </ClInclude>

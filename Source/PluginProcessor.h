@@ -11,6 +11,8 @@
 #include <JuceHeader.h>
 
 #include "dsp/audiofile.h"
+#include "dsp/soundDB.h"
+#include "dsp/bridge.h"
 
 //==============================================================================
 /**
@@ -63,14 +65,21 @@ public:
 		return Params;
 	}
 
-
+	int updataFlag = 0;
+	std::string audioname = "";
 	AudioFileReader audioReader;
+	SoundDB sdbl, sdbr;
+	Bridge bl{ &sdbl };
+	Bridge br{ &sdbr };
 
 private:
 	//Synth Param
 	static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 	juce::AudioProcessorValueTreeState Params{ *this, nullptr, "Parameters", createParameterLayout() };
-	
+	float buf1l[8192], buf1r[8192];
+	float buf2l[8192], buf2r[8192];
+	float bufoutl[8192], bufoutr[8192];
+	int pos = 0, posHop = 0;
 
 	//==============================================================================
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LModelAudioProcessor)

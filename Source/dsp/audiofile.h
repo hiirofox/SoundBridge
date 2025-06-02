@@ -13,7 +13,11 @@ public:
 	int getNumSamples() const { return numSamples; }
 
 	bool isValid() const { return audioBuffer != nullptr && numSamples > 0; }
-
+	float isLoadDone_ = false;
+	bool isLoadDone()
+	{
+		return isLoadDone_;
+	}
 
 private:
 	// 音频数据存储
@@ -43,6 +47,7 @@ public:
 
 	bool loadFile(const std::string& filePath)
 	{
+		isLoadDone_ = false;
 		// 清除之前的数据
 		clear();
 
@@ -67,27 +72,30 @@ public:
 		}
 
 		// 获取音频文件信息
-		numChannels = static_cast<int>(reader->numChannels);
-		sampleRate = static_cast<int>(reader->sampleRate);
-		numSamples = static_cast<int>(reader->lengthInSamples);
+		numChannels = 0;
+		sampleRate = 0;
+		numSamples = 0;
+		int _numChannels = static_cast<int>(reader->numChannels);
+		int _sampleRate = static_cast<int>(reader->sampleRate);
+		int _numSamples = static_cast<int>(reader->lengthInSamples);
 
-		if (numSamples <= 0 || numChannels <= 0)
+		if (_numSamples <= 0 || _numChannels <= 0)
 		{
 			//juce::DBG("Invalid audio file parameters");
 			return false;
 		}
 
 		// 创建音频缓冲区
-		audioBuffer = std::make_unique<juce::AudioBuffer<float>>(numChannels, numSamples);
+		audioBuffer = std::make_unique<juce::AudioBuffer<float>>(_numChannels, _numSamples);
 
 		// 读取整个音频文件到缓冲区
 		bool success = reader->read(
 			audioBuffer.get(),           // 目标缓冲区
 			0,                          // 缓冲区起始位置
-			numSamples,                 // 要读取的样本数
+			_numSamples,                 // 要读取的样本数
 			0,                          // 文件中的起始位置
 			true,                       // 使用左声道
-			numChannels > 1             // 使用右声道（如果存在）
+			true             // 使用右声道（如果存在）
 		);
 
 		if (!success)
@@ -102,6 +110,11 @@ public:
 			", Sample Rate: " + juce::String(sampleRate) +
 			", Samples: " + juce::String(numSamples));
 			*/
+		numChannels = _numChannels;
+		sampleRate = _sampleRate;
+		numSamples = _numSamples;
+
+		isLoadDone_ = true;
 		return true;
 	}
 
