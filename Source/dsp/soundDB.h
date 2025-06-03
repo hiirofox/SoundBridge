@@ -11,9 +11,9 @@ private:
 	const float* datl = NULL;
 	int datlen = 0;
 
-	constexpr static int MaxBlockSize = 2048;
-	constexpr static int MfccSize = 16;//16维mfcc
-	float n_mul = 16.0;
+	constexpr static int MaxBlockSize = 4096;
+	constexpr static int MfccSize = 256;//16维mfcc
+	float n_mul = 4.0;
 	int numBlocks = 0;
 	std::vector<std::array<float, MfccSize>> dbl;
 
@@ -40,7 +40,7 @@ public:
 		dbl.resize(numBlocks);
 		for (int i = 0; i < numBlocks; ++i)
 		{
-			int x = i * numSamples / numBlocks;
+			int x = (float)i / numBlocks * numSamples;
 			if (x + MaxBlockSize < datlen)
 			{
 				mfcc.Process(&datl[x], dbl[i].data(), MaxBlockSize, MfccSize);
@@ -49,9 +49,9 @@ public:
 
 		isUpdata = 0;
 	}
-	void FindSimilarBlock(const float* srcl, float* dstl, int numSamples)//找相似的
+	int FindSimilarBlock(const float* srcl, int numSamples)//找相似的位置
 	{
-		if (isUpdata)return;
+		if (isUpdata)return 0;
 		int len = numSamples;
 		if (len > MaxBlockSize)len = MaxBlockSize;
 		mfcc.Process(srcl, mfccl, len, MfccSize);
@@ -64,6 +64,7 @@ public:
 			{
 				float vl = mfccl[j] - dbl[i][j];
 				suml += vl * vl;
+				//suml += mfccl[j] * dbl[i][j];
 			}
 			if (maxCorrl > suml)
 			{
@@ -72,14 +73,16 @@ public:
 			}
 		}
 		lastMaxIndex = maxIndexl;
-		int startl = maxIndexl * datlen / numBlocks;
-		if (startl + numSamples < datlen)
-		{
-			for (int i = 0; i < numSamples; ++i)
-			{
-				dstl[i] = datl[startl + i];
-			}
-		}
+		int startl = (float)maxIndexl / numBlocks * datlen;
+		return startl;
+	}
+	const float* GetAudioBuffer()
+	{
+		return datl;
+	}
+	int GetAudioBufferNumSamples()
+	{
+		return datlen;
 	}
 	int GetMaxBlockSize()
 	{

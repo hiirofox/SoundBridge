@@ -186,6 +186,7 @@ void LModelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
 			sdbl.Updata(datl, audioReader.getNumSamples());
 			sdbr.Updata(datr, audioReader.getNumSamples());
 		}
+		audioReader.SetLoadDoneFlag();
 	}
 
 	bl.ProcessBlock(recbufl, wavbufl, numSamples);

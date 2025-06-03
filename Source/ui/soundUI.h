@@ -27,6 +27,7 @@ private:
 
 		int numSamples = pReader->getNumSamples();
 		float* buf = pReader->getBufferPointer(0);
+		pReader->lock();
 		if (!buf)return;
 
 		float sum2 = 0;
@@ -53,6 +54,8 @@ private:
 			else lpfv += 0.5 * (v - lpfv);
 			displayData[i] = lpfv;
 		}
+
+		pReader->unlock();
 		shouldUpdata = 0;
 	}
 public:
@@ -107,7 +110,7 @@ public:
 
 		UpdataDisplayData();
 
-		if ((!pReader) || (pReader->getNumSamples() <= 0))
+		if ((!pReader) || (pReader->getNumSamples() <= 0) || shouldUpdata)
 		{
 			g.setColour(juce::Colour(0xFFFFFFFF));
 			g.setFont(juce::Font("FIXEDSYS", 16.0, 1));

@@ -2,112 +2,150 @@
 
 #include "soundDB.h"
 
-class Bridge
-{
-private:
-	SoundDB* pSdb = NULL;
-	constexpr static int MaxBlockSize = 2048;
-	constexpr static int MaxBufSize = MaxBlockSize * 2;
-	int blockSize = MaxBlockSize / 1;
-	int hopSize = MaxBlockSize / 2;
-	float bufin[MaxBufSize];
-	float bufout[MaxBufSize];
-	int pos = 0, poshop = 0;
 
-	float globalBlock[MaxBlockSize];
-	float searchBlock[MaxBlockSize];
-	float searchBlock2[MaxBlockSize];
-	constexpr static int FFTLen = MaxBlockSize;
-	int range = blockSize / 2;
-	float re1[FFTLen];
-	float im1[FFTLen];
-	float re2[FFTLen];
-	float im2[FFTLen];
-	int GetMaxCorrIndex2()//找最大相关(fft) 修好了
-	{
-		for (int i = 0; i < MaxBlockSize; ++i) {
-			//float w = window2[i];
-			float w = 1.0;
-			re1[i] = searchBlock[i] * w;
-			im1[i] = 0.0f;
+class Bridge {
+private:
+	SoundDB* pSdb = nullptr;
+
+	float HANNING_WINDOW(int i, int N) {
+		return 0.5f - 0.5f * std::cosf(2.0 * M_PI * i / static_cast<float>(N));
+	}
+	// 缓冲区配置
+	constexpr static int MaxBlockSize = 4096;
+	constexpr static int MaxBufSize = MaxBlockSize; // 实际不需要更大
+	constexpr static int MaxSearchLen = MaxBufSize;
+
+	// FFT配置 (修复：扩大FFT缓冲区)
+	constexpr static int MaxFFTLen = MaxBlockSize * 2; // 修复1：扩大至4096
+
+	// 工作参数
+	int blockSize = MaxBlockSize / 4;
+	int hopSize = MaxBlockSize / 8;
+	int range = MaxBlockSize; // 搜索半径
+
+	// 循环缓冲区
+	float bufin[MaxBufSize] = { 0 };
+	float bufout[MaxBufSize] = { 0 };
+	int pos = 0;          // 当前输入位置
+	int poshop = 0;       // 跳数计数器
+	int last_hop_pos = 0; // 上次处理位置基准
+
+	// 处理块
+	float searchBlock[MaxSearchLen] = { 0 };
+	float globalBlock1[MaxBlockSize] = { 0 };
+
+	// FFT工作区 (修复：匹配MaxFFTLen)
+	float re1[MaxFFTLen] = { 0 };
+	float im1[MaxFFTLen] = { 0 };
+	float re2[MaxFFTLen] = { 0 };
+	float im2[MaxFFTLen] = { 0 };
+
+	// 获取最大相关位置 (返回数据库绝对位置)
+	int GetMaxCorrPos(const float* audioBuf, int refPos, int numSamples) {
+		// 计算搜索范围 [start, start+range+blockSize)
+		int start = refPos - range / 2;
+		start = std::clamp(start, 0, numSamples - range - blockSize);
+
+		// 确定FFT长度
+		const int dataLen = blockSize + range;
+		const int FFTLen = 1 << static_cast<int>(ceilf(log2f(dataLen)));
+
+		// 检查FFT长度
+		if (FFTLen > MaxFFTLen) return start; // 安全保护
+
+		// 准备数据库片段 (不加窗)
+		std::memset(re1, 0, sizeof(re1));
+		std::memset(im1, 0, sizeof(im1));
+		for (int i = 0; i < dataLen; ++i) {
+			re1[i] = audioBuf[start + i]; // 绝对位置 start+i
 		}
-		for (int i = MaxBlockSize; i < FFTLen; ++i) {
-			re1[i] = 0.0f;
-			im1[i] = 0.0f;
-		}
+
+		// 准备当前块 (加汉宁窗) - 修复3
+		std::memset(re2, 0, sizeof(re2));
+		std::memset(im2, 0, sizeof(im2));
 		for (int i = 0; i < blockSize; ++i) {
-			//float w = window[i];
-			float w = 1.0;
-			re2[i] = globalBlock[i] * w;
-			im2[i] = 0.0f;
+			//re2[i] = globalBlock1[i] * HANNING_WINDOW(i, blockSize);
+			re2[i] = globalBlock1[i];
 		}
-		for (int i = blockSize; i < FFTLen; ++i) {
-			re2[i] = 0.0f;
-			im2[i] = 0.0f;
-		}
+
+		// 计算互相关 (FFT加速)
 		fft_f32(re1, im1, FFTLen, 1);
 		fft_f32(re2, im2, FFTLen, 1);
+
 		for (int i = 0; i < FFTLen; ++i) {
-			float re1v = re1[i];
-			float im1v = im1[i];
-			float re2v = re2[i];
-			float im2v = -im2[i];//这个得共轭
-			re1[i] = re1v * re2v - im1v * im2v;
-			im1[i] = re1v * im2v + im1v * re2v;
+			const float ar = re1[i], ai = im1[i];
+			const float br = re2[i], bi = -im2[i];  // 取共轭
+			re1[i] = ar * br - ai * bi;
+			im1[i] = ar * bi + ai * br;
 		}
-		fft_f32(re1, im1, FFTLen, -1);
-		int index = 0;
-		float maxv = -999999999999;
+
+		fft_f32(re1, im1, FFTLen, -1);  // IFFT
+
+		// 寻找最大相关点 (相对偏移)
+		int maxIndex = 0;
+		float maxVal = -FLT_MAX;
 		for (int i = 0; i < range; ++i) {
-			float r = re1[i];
-			if (r > maxv)
-			{
-				maxv = r;
-				index = i;
+			if (re1[i] > maxVal) {
+				maxVal = re1[i];
+				maxIndex = i;
 			}
 		}
-		return index;
+
+		return start + maxIndex; // 修复2：返回绝对位置
 	}
+
 public:
-	Bridge(SoundDB* pSdb)
-	{
-		this->pSdb = pSdb;
-		memset(bufin, 0, sizeof(bufin));
-		memset(bufout, 0, sizeof(bufout));
-		memset(globalBlock, 0, sizeof(globalBlock));
-		memset(searchBlock, 0, sizeof(searchBlock));
+	Bridge(SoundDB* pSdb) : pSdb(pSdb) {
+		// 缓冲区已在定义时初始化
 	}
-	void ProcessBlock(const float* in, float* out, int numSamples)
-	{
-		for (int i = 0; i < numSamples; ++i)
-		{
+
+	void ProcessBlock(const float* in, float* out, int numSamples) {
+		for (int i = 0; i < numSamples; ++i) {
+			// 更新输入/输出缓冲区
 			bufin[pos] = in[i];
 			out[i] = bufout[pos];
-			bufout[pos] = 0;
+			bufout[pos] = 0;  // 清空当前位置
+
+			// 更新环形缓冲区位置
 			pos = (pos + 1) % MaxBufSize;
 			poshop++;
-			if (poshop >= hopSize)
-			{
+
+			// 达到跳数时处理块
+			if (poshop >= hopSize) {
 				poshop = 0;
-				for (int j = 0; j < MaxBlockSize; ++j)
-				{
-					searchBlock[j] = bufin[(pos + j) % MaxBufSize];
+				last_hop_pos = (pos - hopSize + MaxBufSize) % MaxBufSize; // 修复4：记录基准位置
+
+				// 准备搜索块 (大范围匹配)
+				for (int j = 0; j < MaxSearchLen; ++j) {
+					const int idx = (last_hop_pos + j) % MaxBufSize;
+					//searchBlock[j] = bufin[idx] * HANNING_WINDOW(j, MaxSearchLen);
+					searchBlock[j] = bufin[idx];
 				}
-				for (int j = 0; j < blockSize; ++j)
-				{
-					globalBlock[j] = bufin[(pos + j) % MaxBufSize];
+
+				// 复制当前块 (用于精确匹配)
+				for (int j = 0; j < blockSize; ++j) {
+					const int idx = (last_hop_pos + j) % MaxBufSize;
+					globalBlock1[j] = bufin[idx];
 				}
-				if (pSdb)
-				{
-					pSdb->FindSimilarBlock(searchBlock, searchBlock2, MaxBlockSize);
-				}
-				int index = GetMaxCorrIndex2();
-				//int index = 0;
-				for (int j = 0; j < blockSize; ++j)
-				{
-					float w = 0.5 - 0.5 * cosf(2.0 * M_PI * j / blockSize);
-					//float w = 1.0;
-					bufout[(pos + j) % MaxBufSize] += searchBlock2[j + index] * w;
+
+				// 音色迁移处理
+				if (pSdb) {
+					// 大范围搜索
+					int refPos = pSdb->FindSimilarBlock(searchBlock, MaxSearchLen);
+					const float* dbBuf = pSdb->GetAudioBuffer();
+					int dbSamples = pSdb->GetAudioBufferNumSamples();
+
+					if (dbBuf && dbSamples > blockSize) {
+						// 精确匹配 (返回数据库绝对位置)
+						int matchPos = GetMaxCorrPos(dbBuf, refPos, dbSamples);
+
+						// 写入匹配块 (重叠相加)
+						for (int j = 0; j < blockSize; ++j) {
+							const int idx = (pos + j) % MaxBufSize;
+							const float w = HANNING_WINDOW(j, blockSize);
+							bufout[idx] += dbBuf[matchPos + j] * w;
+						}
+					}
 				}
 			}
 		}

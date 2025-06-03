@@ -3,23 +3,14 @@
 #include <JuceHeader.h>
 #include <vector>
 #include <memory>
+#include <mutex>
+#include <thread>
 
 class AudioFileReader
 {
-public:
-
-	int getNumChannels() const { return numChannels; }
-	int getSampleRate() const { return sampleRate; }
-	int getNumSamples() const { return numSamples; }
-
-	bool isValid() const { return audioBuffer != nullptr && numSamples > 0; }
-	float isLoadDone_ = false;
-	bool isLoadDone()
-	{
-		return isLoadDone_;
-	}
-
 private:
+	mutable  std::mutex mtx;
+
 	// 音频数据存储
 	std::unique_ptr<juce::AudioBuffer<float>> audioBuffer;
 
@@ -45,9 +36,45 @@ public:
 		formatManager.registerBasicFormats();
 	}
 
+	void lock()
+	{
+		mtx.lock();
+	}
+	void unlock()
+	{
+		mtx.unlock();
+	}
+	int getNumChannels() const {
+		std::lock_guard<std::mutex> lock(mtx);
+		return numChannels;
+	}
+	int getSampleRate() const {
+		std::lock_guard<std::mutex> lock(mtx);
+		return sampleRate;
+	}
+	int getNumSamples() const {
+		std::lock_guard<std::mutex> lock(mtx);
+		return numSamples;
+	}
+
+	bool isValid() const { return audioBuffer != nullptr && numSamples > 0; }
+	float isLoadDone_ = false;
+	bool isLoadDone()
+	{
+		return isLoadDone_;
+	}
+	void SetLoadDoneFlag()
+	{
+		isLoadDone_ = true;
+	}
+
 	bool loadFile(const std::string& filePath)
 	{
+		std::lock_guard<std::mutex> lock(mtx);
 		isLoadDone_ = false;
+		numChannels = 0;
+		sampleRate = 0;
+		numSamples = 0;
 		// 清除之前的数据
 		clear();
 
@@ -72,9 +99,6 @@ public:
 		}
 
 		// 获取音频文件信息
-		numChannels = 0;
-		sampleRate = 0;
-		numSamples = 0;
 		int _numChannels = static_cast<int>(reader->numChannels);
 		int _sampleRate = static_cast<int>(reader->sampleRate);
 		int _numSamples = static_cast<int>(reader->lengthInSamples);
@@ -114,12 +138,12 @@ public:
 		sampleRate = _sampleRate;
 		numSamples = _numSamples;
 
-		isLoadDone_ = true;
 		return true;
 	}
 
 	float* getBufferPointer(int channel)
 	{
+		std::lock_guard<std::mutex> lock(mtx);
 		if (!isValid() || channel < 0 || channel >= numChannels)
 		{
 			return nullptr;
