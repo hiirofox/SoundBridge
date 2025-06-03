@@ -12,8 +12,8 @@ private:
 	int datlen = 0;
 
 	constexpr static int MaxBlockSize = 4096;
-	constexpr static int MfccSize = 256;//16άmfcc
-	float n_mul = 4.0;
+	constexpr static int MfccSize = 64;//16άmfcc
+	float n_mul = 8.0;
 	int numBlocks = 0;
 	std::vector<std::array<float, MfccSize>> dbl;
 

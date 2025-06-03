@@ -16,12 +16,12 @@ private:
 	constexpr static int MaxSearchLen = MaxBufSize;
 
 	// FFT配置 (修复：扩大FFT缓冲区)
-	constexpr static int MaxFFTLen = MaxBlockSize * 2; // 修复1：扩大至4096
+	constexpr static int MaxFFTLen = 32768; // 修复1：扩大至4096
 
 	// 工作参数
 	int blockSize = MaxBlockSize / 4;
 	int hopSize = MaxBlockSize / 8;
-	int range = MaxBlockSize; // 搜索半径
+	int range = 8192 - blockSize; // 搜索半径
 
 	// 循环缓冲区
 	float bufin[MaxBufSize] = { 0 };
@@ -33,18 +33,21 @@ private:
 	// 处理块
 	float searchBlock[MaxSearchLen] = { 0 };
 	float globalBlock1[MaxBlockSize] = { 0 };
+	float globalBlock2[MaxBlockSize] = { 0 };
 
 	// FFT工作区 (修复：匹配MaxFFTLen)
 	float re1[MaxFFTLen] = { 0 };
 	float im1[MaxFFTLen] = { 0 };
 	float re2[MaxFFTLen] = { 0 };
 	float im2[MaxFFTLen] = { 0 };
+	float re3[MaxFFTLen] = { 0 };
+	float im3[MaxFFTLen] = { 0 };
 
 	// 获取最大相关位置 (返回数据库绝对位置)
 	int GetMaxCorrPos(const float* audioBuf, int refPos, int numSamples) {
 		// 计算搜索范围 [start, start+range+blockSize)
 		int start = refPos - range / 2;
-		start = std::clamp(start, 0, numSamples - range - blockSize);
+		start = std::clamp(start, 0, numSamples - range - blockSize - hopSize);
 
 		// 确定FFT长度
 		const int dataLen = blockSize + range;
@@ -64,29 +67,38 @@ private:
 		std::memset(re2, 0, sizeof(re2));
 		std::memset(im2, 0, sizeof(im2));
 		for (int i = 0; i < blockSize; ++i) {
-			//re2[i] = globalBlock1[i] * HANNING_WINDOW(i, blockSize);
-			re2[i] = globalBlock1[i];
+			re2[i] = globalBlock1[i] * HANNING_WINDOW(i, blockSize);
+			//re2[i] = globalBlock1[i];
+		}
+		std::memset(re3, 0, sizeof(re3));
+		std::memset(im3, 0, sizeof(im3));
+		for (int i = 0; i < blockSize; ++i) {
+			re3[i] = globalBlock2[i] * HANNING_WINDOW(i, blockSize);
+			//re3[i] = globalBlock2[i];
 		}
 
 		// 计算互相关 (FFT加速)
 		fft_f32(re1, im1, FFTLen, 1);
 		fft_f32(re2, im2, FFTLen, 1);
+		fft_f32(re3, im3, FFTLen, 1);
 
 		for (int i = 0; i < FFTLen; ++i) {
 			const float ar = re1[i], ai = im1[i];
 			const float br = re2[i], bi = -im2[i];  // 取共轭
-			re1[i] = ar * br - ai * bi;
-			im1[i] = ar * bi + ai * br;
+			re2[i] = ar * br - ai * bi;
+			im2[i] = ar * bi + ai * br;
 		}
 
-		fft_f32(re1, im1, FFTLen, -1);  // IFFT
+		fft_f32(re2, im2, FFTLen, -1);  // IFFT
+		fft_f32(re3, im3, FFTLen, -1);  // IFFT
 
 		// 寻找最大相关点 (相对偏移)
 		int maxIndex = 0;
 		float maxVal = -FLT_MAX;
 		for (int i = 0; i < range; ++i) {
-			if (re1[i] > maxVal) {
-				maxVal = re1[i];
+			float v = re2[i] + re3[i];
+			if (v > maxVal) {
+				maxVal = v;
 				maxIndex = i;
 			}
 		}
@@ -138,6 +150,11 @@ public:
 					if (dbBuf && dbSamples > blockSize) {
 						// 精确匹配 (返回数据库绝对位置)
 						int matchPos = GetMaxCorrPos(dbBuf, refPos, dbSamples);
+
+						for (int j = 0; j < blockSize; ++j)
+						{
+							globalBlock2[j] = dbBuf[j + matchPos + hopSize];
+						}
 
 						// 写入匹配块 (重叠相加)
 						for (int j = 0; j < blockSize; ++j) {
